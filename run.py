@@ -26,13 +26,13 @@ def create_kowiki_txt(path_extract, path_txt):
                             f1.write('\n\n\n\n')
 
 
-def train_vocab(config):
+def train_vocab(input, model_prefix, vocab_size, model_type, max_sentence_length):
     spm.SentencePieceTrainer.Train(
-        f'--input={config.file} ' +
-        f'--model_prefix={config.model_prefix} ' +
-        f'--vocab_size={config.vocab_size + 7} ' +
-        f'--model_type={config.model_type} ' +
-        f'--max_sentence_length={config.max_sentence_length}'
+        f'--input={input} ' +
+        f'--model_prefix={model_prefix} ' +
+        f'--vocab_size={vocab_size + 7} ' +
+        f'--model_type={model_type} ' +
+        f'--max_sentence_length={max_sentence_length}'
         f' --pad_id=0 --pad_piece=[PAD]' +
         f' --unk_id=1 --unk_piece=[UNK]' +
         f' --bos_id=2 --bos_piece=[BOS]' +
@@ -42,29 +42,28 @@ def train_vocab(config):
 
 
 if __name__ == '__main__':
-    from config import Config
-
     PATH_WIKI = 'input/kowiki-latest-pages-articles.xml.bz2'
     PATH_EXTRACT = 'output/extract'
     PATH_TXT = 'output/kowiki.txt'
-    MODEL_PREFIX = 'output/kowiki'
-
-    config = Config(
-        file=PATH_TXT,
-        model_prefix=MODEL_PREFIX,
-        vocab_size=8000,
-        model_type='bpe',
-        max_sentence_length=999999,
-    )
+    VOCAB_SIZE = 8000
+    MODEL_PREFIX = f'output/kowiki_{VOCAB_SIZE}'
+    MODEL_TYPE = 'bpe'
+    MAX_SENTENCE_LENGTH = 999999
 
     run_wikiextractor(
         path_wiki=PATH_WIKI,
         path_extract=PATH_EXTRACT
     )
+
     create_kowiki_txt(
         path_extract=PATH_EXTRACT,
         path_txt=PATH_TXT,
     )
+
     train_vocab(
-        config=config
+        input=PATH_TXT,
+        model_prefix=MODEL_PREFIX,
+        vocab_size=VOCAB_SIZE,
+        model_type=MODEL_TYPE,
+        max_sentence_length=MAX_SENTENCE_LENGTH
     )
