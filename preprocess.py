@@ -5,7 +5,16 @@ from tqdm import tqdm
 PATH_TMP = 'tmp'
 os.makedirs(PATH_TMP, exist_ok=True)
 
+
+def check_file_format(path_input, target):
+    input_file_type = path_input.split('.')[-1]
+    assert input_file_type == target, f'Invalid path_input: path_input should be a .{target} format (currently: .{input_file_type})'
+
+
 def preprocess_wiki(path_input, path_txt):
+    # check input file type
+    check_file_format(path_input, 'bz2')
+
     # create output/extract directory
     path_extract = os.path.join(PATH_TMP, "extract")
     os.makedirs(path_extract, exist_ok=True)
@@ -31,6 +40,10 @@ def preprocess_wiki(path_input, path_txt):
 
 
 def preprocess_movie_corpus(path_input, path_txt):
+    # check input file type
+    check_file_format(path_input, 'jsonl')
+
+    # make data
     data = {}
 
     with open(path_input, 'r', encoding='iso-8859-1') as f:
