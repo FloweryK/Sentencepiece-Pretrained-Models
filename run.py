@@ -1,38 +1,16 @@
 import os
-import json
-from tqdm import tqdm
+import argparse
 import sentencepiece as spm
+from preprocess import preprocess_wiki, preprocess_movie_corpus
 
 
-def run_wikiextractor(path_wiki, path_extract):
-    os.system(f'wikiextractor -o {path_extract} --json {path_wiki}')
-
-
-def create_kowiki_txt(path_extract, path_txt):
-    with open(path_txt, 'w') as f1:
-        for prefix in tqdm(os.listdir(path_extract)):
-            for name in os.listdir(os.path.join(path_extract, prefix)):
-                path = os.path.join(path_extract, prefix, name)
-
-                with open(path, 'r') as f2:
-                    for line in f2:
-                        line = line.strip()
-
-                        if line:
-                            data = json.loads(line)
-                            text = '\n'.join([t for t in data['text'].split('\n') if t])
-                            
-                            f1.write(text)
-                            f1.write('\n\n\n\n')
-
-
-def train_vocab(input, model_prefix, vocab_size, model_type, max_sentence_length):
+def train_vocab(path_txt, vocab_size, model_prefix, model_type, max_sentence_length):
     spm.SentencePieceTrainer.Train(
-        f'--input={input} ' +
-        f'--model_prefix={model_prefix} ' +
-        f'--vocab_size={vocab_size + 7} ' +
-        f'--model_type={model_type} ' +
-        f'--max_sentence_length={max_sentence_length}'
+        f' --input={path_txt}' +
+        f' --vocab_size={vocab_size + 7}' +
+        f' --model_prefix={model_prefix}' +
+        f' --model_type={model_type}' +
+        f' --max_sentence_length={max_sentence_length}'
         f' --pad_id=0 --pad_piece=[PAD]' +
         f' --unk_id=1 --unk_piece=[UNK]' +
         f' --bos_id=2 --bos_piece=[BOS]' +
@@ -41,29 +19,38 @@ def train_vocab(input, model_prefix, vocab_size, model_type, max_sentence_length
     )
 
 
-if __name__ == '__main__':
-    PATH_WIKI = 'input/kowiki-latest-pages-articles.xml.bz2'
-    PATH_EXTRACT = 'output/extract'
-    PATH_TXT = 'output/kowiki.txt'
-    VOCAB_SIZE = 8000
-    MODEL_PREFIX = f'output/kowiki_{VOCAB_SIZE}'
-    MODEL_TYPE = 'bpe'
-    MAX_SENTENCE_LENGTH = 999999
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--mode', dest='mode')
+    parser.add_argument('--input', dest='input')
+    parser.add_argument('--prefix', dest='prefix')
+    parser.add_argument('--vocab', dest='vocab', type=int)
+    parser.add_argument('--model_type', dest='model_type', default='bpe')
+    parser.add_argument('--max_sentence_length', dest='max_sentence_length', type=int, default=999999)
 
-    run_wikiextractor(
-        path_wiki=PATH_WIKI,
-        path_extract=PATH_EXTRACT
-    )
+    # parse args
+    args = parser.parse_args()
+    mode = args.mode
+    path_input = args.input
+    prefix = args.prefix
+    vocab_size = args.vocab
+    model_type = args.model_type
+    max_sentence_length = args.max_sentence_length
 
-    create_kowiki_txt(
-        path_extract=PATH_EXTRACT,
-        path_txt=PATH_TXT,
-    )
+    # create output directory
+    path_output = 'output'
+    os.makedirs(path_output, exist_ok=True)
+    
+    # preprocess
+    path_txt = os.path.join(path_output, f'{prefix}_{vocab_size}.txt')
 
-    train_vocab(
-        input=PATH_TXT,
-        model_prefix=MODEL_PREFIX,
-        vocab_size=VOCAB_SIZE,
-        model_type=MODEL_TYPE,
-        max_sentence_length=MAX_SENTENCE_LENGTH
-    )
+    if mode == 'wiki':
+        preprocess_wiki(path_input, path_txt)
+    elif mode == 'movie-corpus':
+        preprocess_movie_corpus(path_input, path_txt)
+    else:
+        raise KeyError('Invalid mode:', mode)
+    
+    # train vocab
+    model_prefix = os.path.join(path_output, f'{prefix}_{vocab_size}')
+    train_vocab(path_txt, vocab_size, model_prefix, model_type, max_sentence_length)
