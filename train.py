@@ -1,7 +1,7 @@
 import os
 import argparse
 import sentencepiece as spm
-from preprocess import preprocess_wiki, preprocess_movie_corpus
+from preprocess import preprocess_wiki, preprocess_movie_corpus, proprocess_kakaotalk
 
 
 if __name__ == "__main__":
@@ -26,6 +26,8 @@ if __name__ == "__main__":
         preprocess_wiki(args.path_input, path_txt)
     elif args.mode == 'movie-corpus':
         preprocess_movie_corpus(args.input, path_txt)
+    elif args.mode == 'kakaotalk':
+        proprocess_kakaotalk(args.input, path_txt)
     else:
         raise KeyError('Invalid mode:', args.mode)
     
