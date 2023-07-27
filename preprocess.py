@@ -136,3 +136,56 @@ def proprocess_kakaotalk(path_input, path_txt):
     with open(path_txt, 'w', encoding='utf8') as f:
         for chat in data.values():
             f.write(' '.join(chat['text']) + '\n')
+
+
+def proprocess_kakaotalk_mobile(path_input, path_txt):    
+    def is_chat(line):
+        pattern = r"^\d{4}년 \d{1,2}월 \d{1,2}일 (?:오전|오후) \d{1,2}:\d{2},"
+        return bool(re.search(pattern, line))
+
+    def extract_chat(line):
+        # extract date
+        pattern = r"^\d{4}년 \d{1,2}월 \d{1,2}일 (?:오전|오후) \d{1,2}:\d{2},"
+        date = re.findall(pattern, line)[0][:-1]
+        line = re.sub(pattern, '', line)[1:-1]
+
+        # extract speaker and chat
+        pattern = r".+ : "
+        speaker = re.findall(pattern, line)[0][:-3]
+        chat = re.sub(pattern, '', line)
+
+        return speaker, date, chat
+        
+    # make qa data
+    data = {}
+    with open(path_input, 'r', encoding="utf8") as f:
+        i_prev = None
+        speaker_prev = None
+        speaker_ids = {}
+
+        for i, line in enumerate(f):
+            if is_chat(line):
+                speaker, date, chat = extract_chat(line)
+                
+                if speaker not in speaker_ids:
+                    speaker_ids[speaker] = len(speaker_ids)
+
+                if (i_prev is None) or (speaker_prev != speaker):
+                    data[i] = {
+                        'chat-id': i,
+                        'speaker-id': speaker_ids[speaker],
+                        'speaker-name': speaker,
+                        'reply-chat-id': i_prev,
+                        'reply-speaker-id': speaker_ids[speaker_prev] if speaker_prev else None,
+                        'reply-speaker-name': speaker_prev,
+                        'text': [chat]
+                    }
+                    i_prev = i
+                else:
+                    data[i_prev]['text'].append(chat)
+
+                speaker_prev = speaker
+    
+    with open(path_txt, 'w', encoding='utf8') as f:
+        for chat in data.values():
+            f.write(' '.join(chat['text']) + '\n')
